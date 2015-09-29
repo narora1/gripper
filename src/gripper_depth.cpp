@@ -333,7 +333,6 @@ class ImageConverter
         }
       }
 
-
       cv::Vec3f centroid_point(x/count, y/count, z/count); 
       std::cout << i <<"\t" << count <<"\t" << x/count << "\t" << y/count <<"\t" << z/count <<std::endl;
       centroids.push_back(centroid_point); 
@@ -347,13 +346,15 @@ class ImageConverter
     gripper_centroid.frame_id_ = msg->header.frame_id;
     tf::Stamped<tf::Point> gripper_centroid_transformed;
     tf::TransformListener listener;
-    try{
+    try
+    {
       listener.waitForTransform(  "/head_camera_depth_optical_frame", "/wrist_roll_link",
           ros::Time(0), ros::Duration(3.0)); 
       listener.transformPoint("/head_camera_depth_optical_frame", 
           ros::Time(0),  gripper_centroid , "/wrist_roll_link", gripper_centroid_transformed);
     }
-    catch (tf::TransformException ex){
+    catch (tf::TransformException ex)
+    {
       ROS_ERROR("%s",ex.what());
       ros::Duration(1.0).sleep();
     }
