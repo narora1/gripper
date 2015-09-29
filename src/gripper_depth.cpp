@@ -70,10 +70,14 @@ class ImageConverter
       return;
     }
 
+    // erode the image to break the connection between the gripper fingers and the gripper plane
     cv::erode(cv_ptr->image, cv_ptr->image, cv::Mat(), cv::Point(-1, -1), 10);
 
     float dx;
     float dy;
+    
+    // Calculate magnitude gradient of depth (mgod) 
+    // and diffrential gradient of depth (dgod) for each pixel
 
     for( size_t i=1 ;i<(cv_ptr->image.rows - 1);i++)
     {
@@ -128,6 +132,7 @@ class ImageConverter
       }
     }
  
+    // Cluster dgod into 9 different bins based on voting 
     for (size_t i=3; i<(cv_ptr->image.rows-3); i++)
     {
       for(size_t j=3; j<(cv_ptr->image.cols-3); j++)
@@ -185,7 +190,7 @@ class ImageConverter
       }
     } 
 
-    // Magnitude gradient of depth
+    // Normalize magnitude gradient of depth
     double min, max;
     cv::minMaxLoc(mgod->image , &min, &max );
 
@@ -197,7 +202,7 @@ class ImageConverter
       }
     }
 
-
+   // Clustering
 
     int total_size = cv_ptr->image.rows * cv_ptr->image.cols;
     std::vector<bool> checked (total_size , false);
@@ -217,9 +222,11 @@ class ImageConverter
         std::vector<size_t> seed_q;
         size_t index = i * cv_ptr->image.cols + j;
 
+        //if checked the pixel already then continue
         if(checked[index])
           continue;
 
+        //create a seed queue for clustering
         seed_q.push_back(index);
 
         size_t seed_index=0;
@@ -229,7 +236,7 @@ class ImageConverter
 
         while (seed_index < static_cast<int> (seed_q.size ()))
         {
-          // Search for sq_idx
+          // Search for seed queue index
           int m;
           int n;
           m = seed_q[seed_index]/cv_ptr->image.cols;            
@@ -239,34 +246,36 @@ class ImageConverter
             for(int y=-1; y<2; y++)
             {
               size_t k = (m+x) * cv_ptr->image.cols + (n+y);
+              //ensure that region growing doesn't go outside the image
               if ((m+x)<0 || (n+y)<0 || (m+x)>=cv_ptr->image.rows ||(n+y)>=cv_ptr->image.cols)
                 continue;                     
 
               if (checked[k])                         
                 continue;
 
+              // if the pixels belong to the same bin then add them to the queue
               if (cluster->image.at<float>(m,n) == cluster->image.at<float>(m+x,n+y)   )
               {             
                 checked[k] = true;
                 seed_q.push_back (k);
               }
-
-
             }
           }
-          seed_index++; }
+          seed_index++; 
+        }
 
+        // if the queue size is within acceptable gripper size
         if (seed_q.size () >= 1000 && seed_q.size () <= 50000)
         { 
           clusters.push_back(seed_q );
         }
-
       }
     }
 
     cv::Mat clustered= cv::Mat::zeros( cv_ptr->image.size(), CV_8UC3);
     cv::Mat individual_clusters = cv::Mat::zeros(cv_ptr->image.size(), CV_32FC1);
 
+    // color all the clusters differntly for better visualization
     cv::RNG rng(12345);
 
     for (int i = 0; i< clusters.size(); i++)
@@ -278,7 +287,6 @@ class ImageConverter
         int  m = clusters[i][j] /cv_ptr->image.cols;
         int  n = clusters[i][j] % cv_ptr->image.cols;
 
-
         clustered.at<cv::Vec3b>(m,n)[0] = color[0];
         clustered.at<cv::Vec3b>(m,n)[1] = color[1];
         clustered.at<cv::Vec3b>(m,n)[2] = color[2];
@@ -288,11 +296,12 @@ class ImageConverter
       }
     }
 
+    // convert the image into 3d points
     cv::Mat K_ = (cv::Mat_<double>(3, 3) <<
         557.7233725919907, 0, 319.6929001020021, 0, 550.2601417321275, 225.9973984128593,
         0.0, 0.0, 1.0);
     cv::Mat points3d;
-    //cv::depthTo3d(individual_clusters, K_, points3d);
+    
     cv::depthTo3d(cv_ptr->image , K_, points3d);
 
     cv::Mat channels[3];
@@ -300,7 +309,7 @@ class ImageConverter
 
     cv::Mat centroids;
 
-    //int count = 0;
+    // calculate centroids for all the clusters
     for(size_t i= 0 ; i< clusters.size(); i++)
     {
       int count = 0; 
@@ -330,6 +339,7 @@ class ImageConverter
       centroids.push_back(centroid_point); 
     }
 
+    // the expected gripper centroid transformed to the camera frame
     tf::Stamped<tf::Point> gripper_centroid;
     gripper_centroid.setX(0.06);
     gripper_centroid.setY(0.00);
@@ -352,18 +362,21 @@ class ImageConverter
     gripper_centroid_transform[1] = gripper_centroid_transformed.y();
     gripper_centroid_transform[2] = gripper_centroid_transformed.z();
 
+    // find the closest cluster centroid to the gripper centroid
     float min_distance = 1000;
     int closest_centroid= 1000;
-    //std::cout << centroids.rows <<std::endl;
+    
     for( int i = 0; i< centroids.rows; i++)
     {
-      float distance = pow((gripper_centroid_transform[0]-centroids.at<cv::Vec3f>(i,0)[0]) ,2) + pow((gripper_centroid_transform[1]-centroids.at<cv::Vec3f>(i,0)[1]) ,2) + pow((gripper_centroid_transform[2]-centroids.at<cv::Vec3f>(i,0)[2]) ,2);
+      float distance = pow((gripper_centroid_transform[0]-centroids.at<cv::Vec3f>(i,0)[0]) ,2) +
+            pow((gripper_centroid_transform[1]-centroids.at<cv::Vec3f>(i,0)[1]) ,2) + 
+            pow((gripper_centroid_transform[2]-centroids.at<cv::Vec3f>(i,0)[2]) ,2);
+      
       distance = sqrt(distance);
       if (distance < min_distance) 
       {
         min_distance = distance ;
         closest_centroid = i;
-
       }
     }
 
@@ -372,7 +385,8 @@ class ImageConverter
 
     cv::Scalar color = cv::Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
     cv::Mat gripper_cluster = cv::Mat::zeros( cv_ptr->image.size(), CV_8UC3);
-
+    
+    //display the closest cluster
     for (int j=0; j<clusters[closest_centroid].size();j++)
     {
       int m = clusters[closest_centroid][j] /cv_ptr->image.cols;
