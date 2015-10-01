@@ -368,6 +368,63 @@ class ImageConverter
     gripper_centroid_transform[1] = gripper_centroid_transformed.y();
     gripper_centroid_transform[2] = gripper_centroid_transformed.z();
 
+  cv::Vec3f point_on_plane_1( 0.06, 0 , 0.035);
+  cv::Vec3f point_on_plane_2( 0.04, -0.01, 0.035);
+  cv::Vec3f point_on_plane_3( 0.07, 0.01, 0.035);
+ 
+  cv::Mat points_on_plane;
+  points_on_plane.push_back(point_on_plane_1);
+  points_on_plane.push_back(point_on_plane_2);
+  points_on_plane.push_back(point_on_plane_3);
+  
+  // transform them to the base frame
+  cv::Mat points_on_plane_transformed;
+  tf::StampedTransform transform;
+
+  try
+  {
+    for (size_t i=0; i<points_on_plane.rows; i++)
+    { 
+      tf::Stamped<tf::Point> point;
+      point.frame_id_ = "/wrist_roll_link";//msg->header.frame_id;
+      point.setX( points_on_plane.at<cv::Vec3f>(i,0)[0]);
+      point.setY( points_on_plane.at<cv::Vec3f>(i,0)[1]); 
+      point.setZ( points_on_plane.at<cv::Vec3f>(i,0)[2]);  
+      tf::Stamped<tf::Point> point_transformed;
+      listener.waitForTransform( msg->header.frame_id, point.frame_id_,// "/base_link", "/head_camera_depth_optical_frame",
+                              ros::Time(0), ros::Duration(3.0));
+   //listener.transformPoint("base_link", point , point_transformed);
+      listener.transformPoint( msg->header.frame_id,
+          ros::Time(0),  point , point.frame_id_, point_transformed);
+
+      cv::Vec3f point_transform;
+      point_transform[0] = point_transformed.x();
+      point_transform[1] = point_transformed.y();
+      point_transform[2] = point_transformed.z();
+
+      points_on_plane_transformed.push_back(point_transform);
+    }
+  }
+  catch(tf::TransformException &ex) 
+  {
+    ROS_ERROR("%s",ex.what());
+    ros::Duration(1.0).sleep();
+  }
+
+  //find equation of the plane in the base frame
+  cv::Vec3f V0 = points_on_plane_transformed.at<cv::Vec3f>(0,0);
+  cv::Vec3f V1 = points_on_plane_transformed.at<cv::Vec3f>(1,0);
+  cv::Vec3f V2 = points_on_plane_transformed.at<cv::Vec3f>(2,0);
+
+  cv::Vec3f normal = (V2-V0).cross(V1-V0);
+  cv::Vec4f plane_transformed;
+  float distance = sqrt (normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+  plane_transformed[0] = normal[0] / distance;
+  plane_transformed[1] = normal[1] / distance;
+  plane_transformed[2] = normal[2] /distance;
+  plane_transformed[3] = - V0.dot(normal/distance);
+
+std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << plane_transformed[2] << "\t" << plane_transformed[3] << std::endl;
     // find the closest cluster centroid to the gripper centroid
     float min_distance = 1000;
     int closest_centroid= 1000;
