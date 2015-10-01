@@ -451,7 +451,7 @@ class ImageConverter
   //std::cout << some[0].rows << std::endl;
   //std::cout << gripper_points.cols << std::endl; 
   //std::cout << gripper_cluster.rows <<std::endl;
-  if (normals_estimator_.empty())
+/*  if (normals_estimator_.empty())
   {
     normals_estimator_ = new cv::RgbdNormals( some[0].rows, some[0].cols,//cv_ptr->image.rows, cv_ptr->image.cols,//gripper_cluster.rows,
                                              //gripper_cluster.cols,
@@ -460,7 +460,7 @@ class ImageConverter
   }
   cv::Mat normals;
   (*normals_estimator_)(gripper_points_, normals);
-
+*/
 /*
   for(int i = 0; i< normals.rows; i++)
   { 
@@ -481,13 +481,13 @@ class ImageConverter
     // Image/cloud height/width must be multiple of block size
     plane_estimator_->set("block_size", 1);
     // Distance a point can be from plane and still be part of it
-    plane_estimator_->set("threshold", 0.005);//observations_threshold_);
+    plane_estimator_->set("threshold", 0.002);//observations_threshold_);
     // Minimum cluster size to be a plane
-    plane_estimator_->set("min_size", 25);
+    plane_estimator_->set("min_size", some[0].rows/2);
   }
   cv::Mat planes_mask;
   std::vector<cv::Vec4f> plane_coefficients;
-  (*plane_estimator_)(gripper_points_,normals,  planes_mask, plane_coefficients);
+  (*plane_estimator_)(gripper_points_,  planes_mask, plane_coefficients);
 
   std::cout << "number of planes" <<plane_coefficients.size() << std::endl;
   
