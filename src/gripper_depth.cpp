@@ -442,9 +442,38 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
         closest_centroid = i;
       }
     }
+    int count=0;
+    float var_x=0, var_y=0;
+    for (int j = 0; j < clusters[closest_centroid].size(); j++)
+    {
+    
+      int m = clusters[closest_centroid][j] /cv_ptr->image.cols;
+      int n = clusters[closest_centroid][j] % cv_ptr->image.cols;
 
-//    std::cout << centroids.at<cv::Vec3f>(closest_centroid,0)[0] << "\t" << centroids.at<cv::Vec3f>(closest_centroid,0)[1] << "\t" << centroids.at<cv::Vec3f>(closest_centroid,0)[2] << std::endl;
-//    std::cout << gripper_centroid_transform[0] <<"\t" << gripper_centroid_transform[1] << "\t" << gripper_centroid_transform[2] << std::endl;
+      if(cv_ptr->image.at<float>(m,n) == FLT_MAX ||  isnan(channels[0].at<float>(m,n))  || isnan(channels[1].at<float>(m,n)) || isnan(channels[2].at<float>(m,n)))
+      {} 
+      else 
+      { 
+        if(fabsf(channels[0].at<float>(m,n) - centroids.at<cv::Vec3f>(closest_centroid,0)[0]) > var_x)
+        {
+          var_x = fabsf(channels[0].at<float>(m,n) - centroids.at<cv::Vec3f>(closest_centroid,0)[0]);
+        } 
+
+        if(fabsf(channels[1].at<float>(m,n) - centroids.at<cv::Vec3f>(closest_centroid,0)[1]) > var_y)
+        {
+          var_y = fabsf(channels[1].at<float>(m,n) - centroids.at<cv::Vec3f>(closest_centroid,0)[1]);
+        }
+      }
+    }
+    std::cout << var_x<<"\t" << var_y << std::endl;
+
+    if (var_x> 0.09 || var_y > 0.09)
+    { 
+      std::cout << "invalid cluster" << std::endl;
+    } 
+
+    //  std::cout << centroids.at<cv::Vec3f>(closest_centroid,0)[0] << "\t" << centroids.at<cv::Vec3f>(closest_centroid,0)[1] << "\t" << centroids.at<cv::Vec3f>(closest_centroid,0)[2] << std::endl;
+    //  std::cout << gripper_centroid_transform[0] <<"\t" << gripper_centroid_transform[1] << "\t" << gripper_centroid_transform[2] << std::endl;
 
     cv::Scalar color = cv::Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
     cv::Mat gripper_cluster = cv::Mat::zeros( cv_ptr->image.size(), CV_8UC3);
@@ -453,22 +482,23 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
     cv::Mat some_1 = cv::Mat::zeros( cv_ptr->image.size(), CV_32FC1); 
     cv::Mat some_2 = cv::Mat::zeros( cv_ptr->image.size(), CV_32FC1);
     cv::Mat some_3 = cv::Mat::zeros( cv_ptr->image.size(), CV_32FC1);
+    
     //display the closest cluster
     for (int j=0; j<clusters[closest_centroid].size();j++)
     {
       int m = clusters[closest_centroid][j] /cv_ptr->image.cols;
       int n = clusters[closest_centroid][j] % cv_ptr->image.cols;
    
-//      some[0].push_back(channels[0].at<float>(m,n));
-//      some[1].push_back(channels[1].at<float>(m,n));
-//      some[2].push_back(channels[2].at<float>(m,n));
+      //some[0].push_back(channels[0].at<float>(m,n));
+      //some[1].push_back(channels[1].at<float>(m,n));
+      //some[2].push_back(channels[2].at<float>(m,n));
       if(!isnan(channels[0].at<float>(m,n)) && !isnan(channels[1].at<float>(m,n)) && !isnan(channels[2].at<float>(m,n)))
       {
         some_1.at<float>(m,n) = channels[0].at<float>(m,n);
         some_2.at<float>(m,n) = channels[1].at<float>(m,n);
         some_3.at<float>(m,n) = channels[2].at<float>(m,n);
       }
-//    std::cout << some_3.at<float>(m,n) << std::endl;
+      //std::cout << some_3.at<float>(m,n) << std::endl;
       gripper_cluster_.at<float>(m,n) = cv_ptr->image.at<float>(m,n);
       gripper_cluster.at<cv::Vec3b>(m,n)[0] = color[0];
       gripper_cluster.at<cv::Vec3b>(m,n)[1] = color[1];
@@ -476,86 +506,86 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
 
     }
   
-  cv::Mat some[3];
-  for (int j =0; j< clusters[closest_centroid].size();j++)
-  {
-    int m = clusters[closest_centroid][j] /cv_ptr->image.cols;
-    int n = clusters[closest_centroid][j] % cv_ptr->image.cols;
-
-    if(!isnan(channels[0].at<float>(m,n)) && !isnan(channels[1].at<float>(m,n)) && !isnan(channels[2].at<float>(m,n)))
+    cv::Mat some[3];
+    for (int j =0; j< clusters[closest_centroid].size();j++)
     {
-      some[0].push_back( channels[0].at<float>(m,n));
-      some[1].push_back(channels[1].at<float>(m,n));
-      some[2].push_back( channels[2].at<float>(m,n));
-    }
-  } 
+      int m = clusters[closest_centroid][j] /cv_ptr->image.cols;
+      int n = clusters[closest_centroid][j] % cv_ptr->image.cols;
+
+      if(!isnan(channels[0].at<float>(m,n)) && !isnan(channels[1].at<float>(m,n)) && !isnan(channels[2].at<float>(m,n)))
+      {
+        some[0].push_back( channels[0].at<float>(m,n));
+        some[1].push_back(channels[1].at<float>(m,n));
+        some[2].push_back( channels[2].at<float>(m,n));
+      }
+    } 
 
 
-  cv::Ptr<cv::RgbdNormals> normals_estimator_;
-  cv::Ptr<cv::RgbdPlane> plane_estimator_;
+    cv::Ptr<cv::RgbdNormals> normals_estimator_;
+    cv::Ptr<cv::RgbdPlane> plane_estimator_;
 
-  std::vector<cv::Mat> gripper_points;
-  //gripper_points.push_back(some_1);
-  //  gripper_points.push_back(some_2);
-  //  gripper_points.push_back(some_3);
-  gripper_points.push_back(some[0]);
-  gripper_points.push_back(some[1]);
-  gripper_points.push_back(some[2]);
-
-  cv::Mat gripper_points_;
-  cv::merge(gripper_points, gripper_points_);
-
-  //std::cout << some[0].rows << std::endl;
-  //std::cout << gripper_points.cols << std::endl; 
-  //std::cout << gripper_cluster.rows <<std::endl;
-/*  if (normals_estimator_.empty())
-  {
-    normals_estimator_ = new cv::RgbdNormals( some[0].rows, some[0].cols,//cv_ptr->image.rows, cv_ptr->image.cols,//gripper_cluster.rows,
+    std::vector<cv::Mat> gripper_points;
+    //gripper_points.push_back(some_1);
+    //  gripper_points.push_back(some_2);
+    //  gripper_points.push_back(some_3);
+    gripper_points.push_back(some[0]);
+    gripper_points.push_back(some[1]);
+    gripper_points.push_back(some[2]);
+ 
+    cv::Mat gripper_points_;
+    cv::merge(gripper_points, gripper_points_);
+ 
+    //std::cout << some[0].rows << std::endl;
+    //std::cout << gripper_points.cols << std::endl; 
+    //std::cout << gripper_cluster.rows <<std::endl;
+   /*  if (normals_estimator_.empty())
+    {
+      normals_estimator_ = new cv::RgbdNormals( some[0].rows, some[0].cols,//cv_ptr->image.rows, cv_ptr->image.cols,//gripper_cluster.rows,
                                              //gripper_cluster.cols,
                                               some[2].depth(), //cv_ptr->image.depth(),
                                              K_);
-  }
+    }
   cv::Mat normals;
   (*normals_estimator_)(gripper_points_, normals);
 */
 /*
-  for(int i = 0; i< normals.rows; i++)
-  { 
-    for(int j =0; j< normals.cols; j++)
-    {
-      std::cout << normals.at<float>(i,j) << std::endl;
+    for(int i = 0; i< normals.rows; i++)
+    { 
+      for(int j =0; j< normals.cols; j++)
+      {
+        std::cout << normals.at<float>(i,j) << std::endl;
+      }
     }
-  }
 */
-  // Find plane(s)
-  if (plane_estimator_.empty())
-  {
-    plane_estimator_ = cv::Algorithm::create<cv::RgbdPlane>("RGBD.RgbdPlane");
-    // Model parameters are based on notes in opencv_candidate
-    plane_estimator_->set("sensor_error_a", 0.0);
-    plane_estimator_->set("sensor_error_b", 0.0);
-    plane_estimator_->set("sensor_error_c", 0.0);
-    // Image/cloud height/width must be multiple of block size
-    plane_estimator_->set("block_size", 1);
-    // Distance a point can be from plane and still be part of it
-    plane_estimator_->set("threshold", 0.002);//observations_threshold_);
-    // Minimum cluster size to be a plane
-    plane_estimator_->set("min_size", some[0].rows/2);
-  }
-  cv::Mat planes_mask;
-  std::vector<cv::Vec4f> plane_coefficients;
-  (*plane_estimator_)(gripper_points_,  planes_mask, plane_coefficients);
+    // Find plane(s)
+    if (plane_estimator_.empty())
+    {
+      plane_estimator_ = cv::Algorithm::create<cv::RgbdPlane>("RGBD.RgbdPlane");
+      // Model parameters are based on notes in opencv_candidate
+      plane_estimator_->set("sensor_error_a", 0.0);
+      plane_estimator_->set("sensor_error_b", 0.0);
+      plane_estimator_->set("sensor_error_c", 0.0);
+      // Image/cloud height/width must be multiple of block size
+      plane_estimator_->set("block_size", 1);
+      // Distance a point can be from plane and still be part of it
+      plane_estimator_->set("threshold", 0.002);//observations_threshold_);
+      // Minimum cluster size to be a plane
+      plane_estimator_->set("min_size", some[0].rows/2);
+    }
+    cv::Mat planes_mask;
+    std::vector<cv::Vec4f> plane_coefficients;
+    (*plane_estimator_)(gripper_points_,  planes_mask, plane_coefficients);
 
-  std::cout << "number of planes" <<plane_coefficients.size() << std::endl;
+    std::cout << "number of planes" <<plane_coefficients.size() << std::endl;
   
-  for (size_t i=0; i < plane_coefficients.size(); i++)
-  {
-   std::cout << plane_coefficients[i][0] <<std::endl;
-   std::cout << plane_coefficients[i][1] << std::endl;
-   std::cout << plane_coefficients[i][2] << std::endl;
-   std::cout << plane_coefficients[i][3] << std::endl;
-  }
-
+    for (size_t i=0; i < plane_coefficients.size(); i++)
+    {
+      std::cout << plane_coefficients[i][0] << std::endl;
+      std::cout << plane_coefficients[i][1] << std::endl;
+      std::cout << plane_coefficients[i][2] << std::endl;
+      std::cout << plane_coefficients[i][3] << std::endl;
+    }
+ 
 
     cv::vector<cv::vector<cv::Point> >  contours_mgod;
     cv::Mat type_mat;
