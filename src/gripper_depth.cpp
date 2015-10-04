@@ -84,9 +84,9 @@ class ImageConverter
     // Calculate magnitude gradient of depth (mgod) 
     // and diffrential gradient of depth (dgod) for each pixel
 
-    for( size_t i=1 ;i<(cv_ptr->image.rows - 1);i++)
+    for(size_t i = 1 ;i < (cv_ptr->image.rows - 1); i++)
     {
-      for(size_t j=1; j<(cv_ptr->image.cols - 1); j++)
+      for(size_t j = 1; j < (cv_ptr->image.cols - 1); j++)
       { 
         mgod->image.at<float>(i, j) = sqrt(((cv_ptr->image.at<float>(i+1,j)-cv_ptr->image.at<float>(i-1,j))* (cv_ptr->image.at<float>(i+1,j)-cv_ptr->image.at<float>(i-1,j))) 
              + ((cv_ptr->image.at<float>(i,j+1)- cv_ptr->image.at<float>(i,j-1))*( cv_ptr->image.at<float>(i,j+1)- cv_ptr->image.at<float>(i,j-1))));
@@ -114,7 +114,7 @@ class ImageConverter
           dgod->image.at<float>(i,j) = 0;
         }
 
-        if (dx == 0 && dy ==0)
+        if (dx == 0 && dy == 0)
         {
           dgod->image.at<float>(i,j) = 0;
         }
@@ -131,20 +131,20 @@ class ImageConverter
           dgod->image.at<float>(i,j) =  atan2(dy,dx) * 180/M_PI;
           if (dgod->image.at<float>(i,j) <0)
           {
-            dgod->image.at<float>(i,j) = 360+ dgod->image.at<float>(i,j);
+            dgod->image.at<float>(i,j) = 360 + dgod->image.at<float>(i,j);
           }
         }    
       }
     }
  
     // Cluster dgod into 9 different bins based on voting 
-    for (size_t i=3; i<(cv_ptr->image.rows-3); i++)
+    for(size_t i = 3; i < (cv_ptr->image.rows - 3); i++)
     {
-      for(size_t j=3; j<(cv_ptr->image.cols-3); j++)
+      for(size_t j = 3; j < (cv_ptr->image.cols - 3); j++)
       {
         int val[2][8];
         int iter = 0;
-        for (int k= 0; k<9  ; k++)
+        for (int k = 0; k < 9 ; k++)
         {
           val[0][k] = iter;
           val[1][k] = 0;
@@ -152,29 +152,29 @@ class ImageConverter
 
         } val[1][0] = 0;
 
-        for (int x=-3; x<4; x++)
+        for (int x =- 3; x < 4; x++)
         {  
-          for(int y=-3; y<4; y++)   
+          for(int y =- 3; y < 4; y++)   
           {   
 
-            float pixel =  dgod->image.at<float>(i+x,j+y);
-            if (pixel<= 22.5)
+            float pixel = dgod->image.at<float>(i+x,j+y);
+            if (pixel <= 22.5)
               val[1][0]++;
-            else if (pixel>22.5 && pixel<= 67.5)
+            else if (pixel > 22.5 && pixel <= 67.5)
               val[1][1]++;
-            else if (pixel>67.5 && pixel<= 112.5)
+            else if (pixel > 67.5 && pixel <= 112.5)
               val[1][2]++;
-            else if (pixel>112.5 && pixel<= 157.5)
+            else if (pixel > 112.5 && pixel <= 157.5)
               val[1][3]++;
-            else if (pixel>157.5 && pixel<= 202.5)
+            else if (pixel > 157.5 && pixel <= 202.5)
               val[1][4]++;
-            else if (pixel>202.5 && pixel<= 247.5)
+            else if (pixel > 202.5 && pixel <= 247.5)
               val[1][5]++;
-            else if (pixel>247.5 && pixel<= 292.5)
+            else if (pixel > 247.5 && pixel <= 292.5)
               val[1][6]++;
-            else if (pixel>292.5 && pixel<= 337.5)
+            else if (pixel > 292.5 && pixel <= 337.5)
               val[1][7]++;
-            else if (pixel>337.5 && pixel<= 360)
+            else if (pixel > 337.5 && pixel <= 360)
               val[1][8]++;
           }
         }
@@ -186,12 +186,10 @@ class ImageConverter
           {
             highest_count = val[1][k];
             result = val[0][k];
-
           }
         }
 
         cluster->image.at<float>(i,j) = result;
-
       }
     } 
 
@@ -199,11 +197,11 @@ class ImageConverter
     double min, max;
     cv::minMaxLoc(mgod->image , &min, &max );
 
-    for( size_t i=1 ;i<(cv_ptr->image.rows - 1);i++)
+    for(size_t i = 1 ; i < (cv_ptr->image.rows - 1); i++)
     {
-      for(size_t j=1; j<(cv_ptr->image.cols - 1); j++)
+      for(size_t j = 1; j < (cv_ptr->image.cols - 1); j++)
       { 
-        mgod->image.at<float>(i, j) = (mgod->image.at<float>(i, j) - min) /(max-min);
+        mgod->image.at<float>(i, j) = (mgod->image.at<float>(i, j) - min) / (max-min);
       }
     }
 
@@ -213,12 +211,10 @@ class ImageConverter
     std::vector<bool> checked (total_size , false);
 
     std::vector< std::vector<size_t> >clusters;
-    for (size_t i=1 ; i<cv_ptr->image.rows-1; i++)
+    for (size_t i = 1 ; i < cv_ptr->image.rows - 1; i++)
     {
-      for(size_t j=1; j< cv_ptr->image.cols-1; j++)
+      for(size_t j = 1; j < cv_ptr->image.cols - 1; j++)
       {
-
-
         if(dgod->image.at<float>(i,j) == FLT_MAX)
         {
           continue;
@@ -238,7 +234,6 @@ class ImageConverter
 
         checked[index] = true;
 
-
         while (seed_index < static_cast<int> (seed_q.size ()))
         {
           // Search for seed queue index
@@ -246,13 +241,13 @@ class ImageConverter
           int n;
           m = seed_q[seed_index]/cv_ptr->image.cols;            
           n = seed_q[seed_index] % cv_ptr->image.cols;
-          for (int x=-1; x<2; x++)
+          for (int x =- 1; x < 2; x++)
           {  
-            for(int y=-1; y<2; y++)
+            for(int y =- 1; y < 2; y++)
             {
               size_t k = (m+x) * cv_ptr->image.cols + (n+y);
               //ensure that region growing doesn't go outside the image
-              if ((m+x)<0 || (n+y)<0 || (m+x)>=cv_ptr->image.rows ||(n+y)>=cv_ptr->image.cols)
+              if ((m+x) < 0 || (n+y) < 0 || (m+x)>=cv_ptr->image.rows ||(n+y)>=cv_ptr->image.cols)
                 continue;                     
 
               if (checked[k])                         
@@ -283,13 +278,13 @@ class ImageConverter
     // color all the clusters differntly for better visualization
     cv::RNG rng(12345);
 
-    for (int i = 0; i< clusters.size(); i++)
+    for (int i = 0; i < clusters.size(); i++)
     { 
       cv::Scalar color = cv::Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
 
-      for (int j=0; j<clusters[i].size();j++)
+      for (int j = 0; j < clusters[i].size(); j++)
       {
-        int  m = clusters[i][j] /cv_ptr->image.cols;
+        int  m = clusters[i][j] / cv_ptr->image.cols;
         int  n = clusters[i][j] % cv_ptr->image.cols;
 
         clustered.at<cv::Vec3b>(m,n)[0] = color[0];
@@ -315,13 +310,13 @@ class ImageConverter
     cv::Mat centroids;
 
     // calculate centroids for all the clusters
-    for(size_t i= 0 ; i< clusters.size(); i++)
+    for(size_t i = 0 ; i < clusters.size(); i++)
     {
       int count = 0; 
       double x = 0;
       double y = 0;
       double z = 0;
-      for(size_t j =0; j<clusters[i].size(); j++)
+      for(size_t j = 0; j < clusters[i].size(); j++)
       {
 
         int m = clusters[i][j] /cv_ptr->image.cols;
@@ -383,7 +378,7 @@ class ImageConverter
 
   try
   {
-    for (size_t i=0; i<points_on_plane.rows; i++)
+    for (size_t i = 0; i < points_on_plane.rows; i++)
     { 
       tf::Stamped<tf::Point> point;
       point.frame_id_ = "/wrist_roll_link";//msg->header.frame_id;
@@ -429,7 +424,7 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
     float min_distance = 1000;
     int closest_centroid= 1000;
     
-    for( int i = 0; i< centroids.rows; i++)
+    for( int i = 0; i < centroids.rows; i++)
     {
       float distance = pow((gripper_centroid_transform[0]-centroids.at<cv::Vec3f>(i,0)[0]) ,2) +
             pow((gripper_centroid_transform[1]-centroids.at<cv::Vec3f>(i,0)[1]) ,2) + 
@@ -442,8 +437,8 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
         closest_centroid = i;
       }
     }
-    int count=0;
-    float var_x=0, var_y=0;
+    int count = 0;
+    float var_x = 0, var_y = 0;
     for (int j = 0; j < clusters[closest_centroid].size(); j++)
     {
     
@@ -465,9 +460,9 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
         }
       }
     }
-    std::cout << var_x<<"\t" << var_y << std::endl;
+    std::cout << var_x <<"\t" << var_y << std::endl;
 
-    if (var_x> 0.09 || var_y > 0.09)
+    if (var_x > 0.09 || var_y > 0.09)
     { 
       std::cout << "invalid cluster" << std::endl;
     } 
@@ -484,9 +479,9 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
     cv::Mat some_3 = cv::Mat::zeros( cv_ptr->image.size(), CV_32FC1);
     
     //display the closest cluster
-    for (int j=0; j<clusters[closest_centroid].size();j++)
+    for (int j = 0; j < clusters[closest_centroid].size(); j++)
     {
-      int m = clusters[closest_centroid][j] /cv_ptr->image.cols;
+      int m = clusters[closest_centroid][j] / cv_ptr->image.cols;
       int n = clusters[closest_centroid][j] % cv_ptr->image.cols;
    
       //some[0].push_back(channels[0].at<float>(m,n));
@@ -507,7 +502,7 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
     }
   
     cv::Mat some[3];
-    for (int j =0; j< clusters[closest_centroid].size();j++)
+    for (int j = 0; j < clusters[closest_centroid].size();j++)
     {
       int m = clusters[closest_centroid][j] /cv_ptr->image.cols;
       int n = clusters[closest_centroid][j] % cv_ptr->image.cols;
@@ -578,7 +573,7 @@ std::cout << plane_transformed[0] << "\t" << plane_transformed[1] << "\t" << pla
 
     std::cout << "number of planes" <<plane_coefficients.size() << std::endl;
   
-    for (size_t i=0; i < plane_coefficients.size(); i++)
+    for (size_t i = 0; i < plane_coefficients.size(); i++)
     {
       std::cout << plane_coefficients[i][0] << std::endl;
       std::cout << plane_coefficients[i][1] << std::endl;
